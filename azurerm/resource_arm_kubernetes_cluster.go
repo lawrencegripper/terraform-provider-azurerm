@@ -45,10 +45,35 @@ func resourceArmKubernetesCluster() *schema.Resource {
 				Computed: true,
 			},
 
-			"kube_config": {
-				Type:     schema.TypeString,
+			"auth": {
+				Type:     schema.TypeList,
 				Optional: true,
 				Computed: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"kubeconfig": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"username": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"password": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"clientCertificate": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"CA": {
+							Type:     schema.TypeString,
+							Required: true,
+						},
+					},
+				},
 			},
 
 			"linux_profile": {
