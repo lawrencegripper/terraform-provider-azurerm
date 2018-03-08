@@ -70,22 +70,7 @@ func resourceArmKubernetesCluster() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
-						"clientCertificate": {
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"CA": {
-							Type:     schema.TypeString,
-							Required: true,
 						"host": {
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"username": {
-							Type:     schema.TypeString,
-							Computed: true,
-						},
-						"password": {
 							Type:     schema.TypeString,
 							Computed: true,
 						},
