@@ -17,6 +17,8 @@ type AccessToken struct {
 }
 
 func findValidAccessTokenForTenant(tokens []cli.Token, tenantId string) (*AccessToken, error) {
+	mostRecentAccessToken := AccessToken{}
+	foundToken := false
 	for _, accessToken := range tokens {
 		token, err := accessToken.ToADALToken()
 		if err != nil {
@@ -28,9 +30,14 @@ func findValidAccessTokenForTenant(tokens []cli.Token, tenantId string) (*Access
 			return nil, fmt.Errorf("Error parsing expiration date: %q", accessToken.ExpiresOn)
 		}
 
-		if expirationDate.UTC().Before(time.Now().UTC()) {
-			log.Printf("[DEBUG] Token %q has expired", token.AccessToken)
+		if expirationDate.UTC().Before(time.Now().UTC()) && accessToken.RefreshToken == "" {
+			log.Printf("[DEBUG] Token %q has expired and it doens't have a refresh token", token.AccessToken)
 			continue
+		}
+
+		if mostRecentAccessToken.AccessToken != nil &&
+			expirationDate.UTC().After(mostRecentAccessToken.AccessToken.Expires()) {
+			log.Printf("[DEBUG] Token %q has later expiration date", token.AccessToken)
 		}
 
 		if !strings.Contains(accessToken.Resource, "management") {
@@ -43,13 +50,15 @@ func findValidAccessTokenForTenant(tokens []cli.Token, tenantId string) (*Access
 			continue
 		}
 
-		validAccessToken := AccessToken{
+		mostRecentAccessToken = AccessToken{
 			ClientID:     accessToken.ClientID,
 			AccessToken:  &token,
 			IsCloudShell: accessToken.RefreshToken == "",
 		}
-		return &validAccessToken, nil
+		foundToken = true
 	}
-
+	if foundToken {
+		return &mostRecentAccessToken, nil
+	}
 	return nil, fmt.Errorf("No Access Token was found for the Tenant ID %q", tenantId)
 }
