@@ -6,6 +6,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2017-05-10/resources"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/azure"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/helpers/response"
 	"github.com/terraform-providers/terraform-provider-azurerm/azurerm/utils"
 )
@@ -27,6 +28,13 @@ func resourceArmResourceGroup() *schema.Resource {
 			"location": locationSchema(),
 
 			"tags": tagsSchema(),
+
+			"managed_by": {
+				Type:         schema.TypeString,
+				Optional:     true,
+				ForceNew:     true,
+				ValidateFunc: azure.ValidateResourceID,
+			},
 		},
 	}
 }
@@ -42,6 +50,10 @@ func resourceArmResourceGroupCreateUpdate(d *schema.ResourceData, meta interface
 		Location: utils.String(location),
 		Tags:     expandTags(tags),
 	}
+	if managedBy, ok := d.GetOkExists("managed_by"); ok {
+		parameters.ManagedBy = utils.String(managedBy.(string))
+	}
+
 	_, err := client.CreateOrUpdate(ctx, name, parameters)
 	if err != nil {
 		return fmt.Errorf("Error creating resource group: %+v", err)
@@ -82,6 +94,9 @@ func resourceArmResourceGroupRead(d *schema.ResourceData, meta interface{}) erro
 	d.Set("name", resp.Name)
 	if location := resp.Location; location != nil {
 		d.Set("location", azureRMNormalizeLocation(*location))
+	}
+	if managedBy := resp.ManagedBy; managedBy != nil {
+		d.Set("managed_by", *managedBy)
 	}
 	flattenAndSetTags(d, resp.Tags)
 

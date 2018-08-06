@@ -74,6 +74,27 @@ func TestAccAzureRMResourceGroup_basic(t *testing.T) {
 	})
 }
 
+func TestAccAzureRMResourceGroup_managed_by(t *testing.T) {
+	ri := acctest.RandInt()
+	config := testAccAzureRMResourceGroup_withManagedBy(ri, testLocation())
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testCheckAzureRMResourceGroupDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				Check: resource.ComposeTestCheckFunc(
+					testCheckAzureRMResourceGroupExists("azurerm_resource_group.test_parent"),
+					testCheckAzureRMResourceGroupExists("azurerm_resource_group.test_child"),
+					testCheckAzureRMResourceGroupManagedBy("azurerm_resource_group.test_parent", "azurerm_resource_group.test_child"),
+				),
+			},
+		},
+	})
+}
+
 func TestAccAzureRMResourceGroup_disappears(t *testing.T) {
 	resourceName := "azurerm_resource_group.test"
 	ri := acctest.RandInt()
@@ -156,6 +177,31 @@ func testCheckAzureRMResourceGroupExists(name string) resource.TestCheckFunc {
 	}
 }
 
+func testCheckAzureRMResourceGroupManagedBy(parentName, childName string) resource.TestCheckFunc {
+	return func(s *terraform.State) error {
+		// Ensure we have enough information in state to look up in API
+		parentRG, ok := s.RootModule().Resources[parentName]
+		if !ok {
+			return fmt.Errorf("Not found: %s", parentName)
+		}
+
+		parentID := parentRG.Primary.Attributes["id"]
+
+		childRG, ok := s.RootModule().Resources[childName]
+		if !ok {
+			return fmt.Errorf("Not found: %s", childName)
+		}
+
+		childMangedByID := childRG.Primary.Attributes["managed_by"]
+
+		if parentID != childMangedByID {
+			return fmt.Errorf("Failed setting 'managedBy' on Resource Group %q. Expected: %s Got: %s", childName, parentID, childMangedByID)
+		}
+
+		return nil
+	}
+}
+
 func testCheckAzureRMResourceGroupDisappears(name string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		// Ensure we have enough information in state to look up in API
@@ -164,7 +210,7 @@ func testCheckAzureRMResourceGroupDisappears(name string) resource.TestCheckFunc
 			return fmt.Errorf("Not found: %s", name)
 		}
 
-		resourceGroup := rs.Primary.Attributes["name"]
+		resourceGroup := rs.Primary.Attributes["id"]
 
 		// Ensure resource group exists in API
 		client := testAccProvider.Meta().(*ArmClient).resourceGroupsClient
@@ -242,4 +288,20 @@ resource "azurerm_resource_group" "test" {
     }
 }
 `, rInt, location)
+}
+
+func testAccAzureRMResourceGroup_withManagedBy(rInt int, location string) string {
+	return fmt.Sprintf(`
+resource "azurerm_resource_group" "test_parent" {
+    name = "acctestRG-parent-%d"
+    location = "%s"
+}
+
+resource "azurerm_resource_group" "test_child" {
+    name = "acctestRG-child-%d"
+    location = "%s"
+
+	managed_by = "${azurerm_resource_group.test_parent.id}"
+}
+`, rInt, location, rInt, location)
 }

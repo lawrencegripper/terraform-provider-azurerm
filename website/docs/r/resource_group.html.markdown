@@ -33,6 +33,8 @@ The following arguments are supported:
 * `location` - (Required) The location where the resource group should be created.
     For a list of all Azure locations, please consult [this link](http://azure.microsoft.com/en-us/regions/) or run `az account list-locations --output table`.
 
+* `managed_by` - (Optional) The  fully qualified resource ID of the resource that manages this resource. Indicates if this resource is managed by another azure resource. 
+
 * `tags` - (Optional) A mapping of tags to assign to the resource.
 
 ## Attributes Reference
