@@ -45,17 +45,17 @@ func BuildClient(accountsClient storage.AccountsClient, options *common.ClientOp
 }
 
 func (client Client) FindResourceGroup(ctx context.Context, accountName string) (*string, error) {
-	accounts, err := client.accountsClient.List(ctx)
+	accounts, err := client.accountsClient.ListComplete(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("Error listing Storage Accounts (to find Resource Group for %q): %s", accountName, err)
 	}
 
-	if accounts.Value == nil {
-		return nil, nil
-	}
-
 	var resourceGroup *string
-	for _, account := range *accounts.Value {
+	for accounts.NotDone() {
+		// Get current and advance to next
+		account := accounts.Value()
+		accounts.Next()
+
 		if account.Name == nil || account.ID == nil {
 			continue
 		}

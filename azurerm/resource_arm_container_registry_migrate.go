@@ -93,12 +93,15 @@ func updateV1ToV2StorageAccountName(is *terraform.InstanceState, meta interface{
 func findAzureStorageAccountIdFromName(name string, meta interface{}) (string, error) {
 	ctx := meta.(*ArmClient).StopContext
 	client := meta.(*ArmClient).storageServiceClient
-	accounts, err := client.List(ctx)
+	accounts, err := client.ListComplete(ctx)
 	if err != nil {
 		return "", err
 	}
 
-	for _, account := range *accounts.Value {
+	for accounts.NotDone() {
+		account := accounts.Value()
+		accounts.Next()
+
 		if strings.EqualFold(*account.Name, name) {
 			return *account.ID, nil
 		}
